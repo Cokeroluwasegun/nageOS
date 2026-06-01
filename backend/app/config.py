@@ -28,15 +28,10 @@ class Settings(BaseSettings):
     paystack_secret_key: str = ""
     flutterwave_secret_key: str = ""
 
-    # Sentry
-    sentry_dsn: str = ""
-
     # Admin
     admin_email: str = ""
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
 
 
 @lru_cache()
