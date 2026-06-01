@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
-from app.routers import webhooks
+from app.routers import webhooks, orders, customers, payments
 
 settings = get_settings()
 
@@ -19,8 +19,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers
 app.include_router(webhooks.router, prefix="/webhook", tags=["WhatsApp"])
+app.include_router(orders.router, prefix="/orders", tags=["Orders"])
+app.include_router(customers.router, prefix="/customers", tags=["Customers"])
+app.include_router(payments.router, prefix="/payments", tags=["Payments"])
 
 
 @app.get("/health")
