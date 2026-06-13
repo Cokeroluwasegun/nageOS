@@ -4,7 +4,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import {
   MessageSquare, ShoppingBag, Users, BarChart2,
-  Settings, Zap, Circle, LayoutDashboard
+  Settings, Zap, Circle, LayoutDashboard,
+  Package, Radio
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { useBusiness } from '@/lib/business-context'
@@ -12,12 +13,14 @@ import { useBusiness } from '@/lib/business-context'
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 const nav = [
-  { href: '/overview',  icon: LayoutDashboard, label: 'Overview' },
-  { href: '/inbox',     icon: MessageSquare,   label: 'Inbox' },
-  { href: '/orders',    icon: ShoppingBag,     label: 'Orders' },
-  { href: '/customers', icon: Users,           label: 'Customers' },
-  { href: '/analytics', icon: BarChart2,       label: 'Analytics' },
-  { href: '/settings',  icon: Settings,        label: 'Settings' },
+  { href: '/overview',   icon: LayoutDashboard, label: 'Overview' },
+  { href: '/inbox',      icon: MessageSquare,   label: 'Inbox' },
+  { href: '/orders',     icon: ShoppingBag,     label: 'Orders' },
+  { href: '/customers',  icon: Users,           label: 'Customers' },
+  { href: '/products',   icon: Package,         label: 'Products' },
+  { href: '/broadcast',  icon: Radio,           label: 'Broadcast' },
+  { href: '/analytics',  icon: BarChart2,       label: 'Analytics' },
+  { href: '/settings',   icon: Settings,        label: 'Settings' },
 ]
 
 export default function Sidebar() {

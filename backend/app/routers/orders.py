@@ -85,3 +85,73 @@ async def get_orders_for_customer(customer_id: str, business_id: str):
     """Get all orders for a specific customer."""
     orders = get_customer_orders(customer_id, business_id)
     return {"status": "ok", "orders": orders, "count": len(orders)}
+
+
+@router.post("/{order_id}/invoice")
+async def generate_invoice(order_id: str):
+    """Generate a payment link for an order and send via WhatsApp."""
+    from app.services.payments import generate_paystack_payment_link
+    from app.services.whatsapp import send_whatsapp_message
+
+    order_result = supabase.table("orders").select(
+        "*, customers(name, wa_phone, email), businesses(name, phone_number_id, wa_access_token)"
+    ).eq("id", order_id).limit(1).execute()
+
+    if not order_result.data:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order = order_result.data[0]
+    customer = order.get("customers", {})
+    business = order.get("businesses", {})
+
+    if not customer.get("email"):
+        customer_email = f"{customer.get('wa_phone', 'customer')}@nageos.io"
+    else:
+        customer_email = customer["email"]
+
+    payment_result = await generate_paystack_payment_link(
+        amount=float(order["total_amount"]),
+        email=customer_email,
+        order_id=order_id,
+        order_number=order["order_number"],
+        business_name=business.get("name", "NageOS Business"),
+    )
+
+    if payment_result["status"] != "ok":
+        raise HTTPException(status_code=400, detail="Failed to generate payment link")
+
+    payment_url = payment_result["payment_url"]
+
+    # Format invoice message
+    items_text = ""
+    if isinstance(order.get("items"), list):
+        items_text = "\n".join([
+            f"• {item.get('name')} x{item.get('qty', 1)} — ₦{item.get('price', 0):,.0f}"
+            for item in order["items"]
+        ])
+
+    message = (
+        f"Hi {customer.get('name', 'there')}! Here is your invoice from {business.get('name', 'us')}.\n\n"
+        f"*Order:* {order['order_number']}\n"
+        f"*Items:*\n{items_text}\n\n"
+        f"*Total: ₦{float(order['total_amount']):,.0f}*\n\n"
+        f"Pay securely here:\n{payment_url}\n\n"
+        f"Payment is confirmed automatically once complete."
+    )
+
+    await send_whatsapp_message(
+        phone=customer.get("wa_phone"),
+        message=message,
+        phone_number_id=business.get("phone_number_id"),
+        access_token=business.get("wa_access_token"),
+    )
+
+    supabase.table("orders").update({
+        "payment_status": "pending_verification"
+    }).eq("id", order_id).execute()
+
+    return {
+        "status": "ok",
+        "payment_url": payment_url,
+        "message_sent": True,
+    }

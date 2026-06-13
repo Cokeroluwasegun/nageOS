@@ -30,14 +30,16 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/signup')
 
-  // Not logged in and trying to access dashboard
+  const isOnboarding = request.nextUrl.pathname.startsWith('/onboarding')
+
+  // Not logged in — redirect to login
   if (!user && !isAuthPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Logged in and trying to access auth pages
+  // Logged in and on auth pages — redirect to dashboard
   if (user && isAuthPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/overview'

@@ -113,3 +113,43 @@ async def process_verified_payment(
 
     logger.info(f"Payment processed: {reference} — {currency} {amount}")
     return payment
+
+
+async def generate_paystack_payment_link(
+    amount: float,
+    email: str,
+    order_id: str,
+    order_number: str,
+    business_name: str,
+) -> dict:
+    """Generate a Paystack payment link for an order."""
+    url = "https://api.paystack.co/transaction/initialize"
+    headers = {
+        "Authorization": f"Bearer {settings.paystack_secret_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "email": email,
+        "amount": int(amount * 100),  # Paystack uses kobo
+        "reference": order_id,
+        "metadata": {
+            "order_number": order_number,
+            "business_name": business_name,
+        },
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            if data.get("status"):
+                return {
+                    "status": "ok",
+                    "payment_url": data["data"]["authorization_url"],
+                    "reference": data["data"]["reference"],
+                }
+            return {"status": "error", "detail": data.get("message")}
+        except Exception as e:
+            logger.error(f"Paystack link generation failed: {e}")
+            return {"status": "error", "detail": str(e)}    

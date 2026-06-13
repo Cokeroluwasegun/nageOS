@@ -136,7 +136,7 @@ export default function OverviewPage() {
             </div>
           </div>
           <button
-            onClick={() => window.location.href = '/onboarding'}
+            onClick={() => window.location.href = '/settings'}
             style={{
               padding: '7px 14px',
               background: 'var(--warning)',

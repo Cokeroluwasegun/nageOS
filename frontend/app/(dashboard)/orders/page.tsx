@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { formatCurrency, getStatusBadge, timeAgo } from '@/lib/utils'
+import { useBusiness } from '@/lib/business-context'
 
-const BUSINESS_ID = 'a0000000-0000-0000-0000-000000000001'
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 type Order = {
@@ -28,12 +28,15 @@ const filters = [
 ]
 
 export default function OrdersPage() {
+  const { businessId, loading: bizLoading } = useBusiness()
   const [orders, setOrders] = useState<Order[]>([])
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState(0)
 
-  useEffect(() => { fetchOrders() }, [])
+  useEffect(() => {
+    if (businessId) fetchOrders()
+  }, [businessId])
 
   useEffect(() => {
     applyFilter(activeFilter)
@@ -42,7 +45,7 @@ export default function OrdersPage() {
   async function fetchOrders() {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/orders/business/${BUSINESS_ID}`)
+      const res = await fetch(`${API}/orders/business/${businessId}`)
       const data = await res.json()
       setAllOrders(data.orders || [])
     } finally {
@@ -58,16 +61,20 @@ export default function OrdersPage() {
     setOrders(filtered)
   }
 
-  function handleFilter(index: number) {
-    setActiveFilter(index)
+  if (bizLoading) {
+    return <div style={{ padding: '28px 32px', color: 'var(--neutral-400)' }}>Loading...</div>
   }
 
   return (
     <div style={{ padding: '28px 32px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--neutral-900)', letterSpacing: '-0.02em' }}>Orders</h1>
-          <p style={{ color: 'var(--neutral-400)', fontSize: 13, marginTop: 2 }}>{orders.length} orders</p>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--neutral-900)', letterSpacing: '-0.02em' }}>
+            Orders
+          </h1>
+          <p style={{ color: 'var(--neutral-400)', fontSize: 13, marginTop: 2 }}>
+            {orders.length} orders
+          </p>
         </div>
         <button
           className="btn btn-primary"
@@ -82,14 +89,12 @@ export default function OrdersPage() {
         {filters.map((f, i) => (
           <button
             key={f.label}
-            onClick={() => handleFilter(i)}
+            onClick={() => setActiveFilter(i)}
             style={{
               padding: '7px 16px',
               borderRadius: 'var(--radius-md)',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-              border: '1px solid',
+              fontSize: 13, fontWeight: 500,
+              cursor: 'pointer', border: '1px solid',
               borderColor: activeFilter === i ? 'var(--brand-primary-dark)' : 'var(--neutral-200)',
               background: activeFilter === i ? 'var(--brand-primary)' : '#fff',
               color: activeFilter === i ? '#fff' : 'var(--neutral-600)',
@@ -130,7 +135,7 @@ export default function OrdersPage() {
             ) : orders.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ padding: 32, textAlign: 'center', color: 'var(--neutral-400)' }}>
-                  No orders found
+                  No orders yet. Orders are created automatically when customers place them via WhatsApp.
                 </td>
               </tr>
             ) : orders.map((order, i) => (

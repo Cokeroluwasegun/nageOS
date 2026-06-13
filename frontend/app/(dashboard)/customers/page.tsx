@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { formatCurrency, getInitials, timeAgo } from '@/lib/utils'
+import { useBusiness } from '@/lib/business-context'
 
-const BUSINESS_ID = 'a0000000-0000-0000-0000-000000000001'
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 type Customer = {
@@ -24,20 +24,22 @@ const avatarColors = [
 ]
 
 export default function CustomersPage() {
+  const { businessId, loading: bizLoading } = useBusiness()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!businessId) return
     const t = setTimeout(() => fetchCustomers(), 300)
     return () => clearTimeout(t)
-  }, [search])
+  }, [search, businessId])
 
   async function fetchCustomers() {
     setLoading(true)
     try {
       const res = await fetch(
-        `${API}/customers/business/${BUSINESS_ID}${search ? `?search=${search}` : ''}`
+        `${API}/customers/business/${businessId}${search ? `?search=${search}` : ''}`
       )
       const data = await res.json()
       setCustomers(data.customers || [])
@@ -46,15 +48,27 @@ export default function CustomersPage() {
     }
   }
 
+  if (bizLoading) {
+    return <div style={{ padding: '28px 32px', color: 'var(--neutral-400)' }}>Loading...</div>
+  }
+
   return (
     <div style={{ padding: '28px 32px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--neutral-900)', letterSpacing: '-0.02em' }}>Customers</h1>
-          <p style={{ color: 'var(--neutral-400)', fontSize: 13, marginTop: 2 }}>{customers.length} total</p>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--neutral-900)', letterSpacing: '-0.02em' }}>
+            Customers
+          </h1>
+          <p style={{ color: 'var(--neutral-400)', fontSize: 13, marginTop: 2 }}>
+            {customers.length} total
+          </p>
         </div>
         <div style={{ position: 'relative' }}>
-          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--neutral-400)' }} />
+          <Search size={13} style={{
+            position: 'absolute', left: 10,
+            top: '50%', transform: 'translateY(-50%)',
+            color: 'var(--neutral-400)',
+          }} />
           <input
             placeholder="Search by name or phone..."
             value={search}
@@ -65,9 +79,18 @@ export default function CustomersPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--neutral-400)' }}>Loading customers...</div>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--neutral-400)' }}>
+          Loading customers...
+        </div>
       ) : customers.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--neutral-400)' }}>No customers yet</div>
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <div style={{ fontSize: 14, color: 'var(--neutral-400)', marginBottom: 8 }}>
+            No customers yet
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--neutral-300)' }}>
+            Customers appear here automatically when they message your WhatsApp number
+          </div>
+        </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
           {customers.map((c, i) => {
@@ -75,7 +98,10 @@ export default function CustomersPage() {
             const isVIP = c.total_spent > 50000
             const isNew = c.order_count === 0
             return (
-              <div key={c.id} className="card" style={{ cursor: 'pointer', transition: 'border-color 0.15s' }}
+              <div
+                key={c.id}
+                className="card"
+                style={{ cursor: 'pointer', transition: 'border-color 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--brand-primary)')}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--neutral-200)')}
               >
@@ -92,13 +118,15 @@ export default function CustomersPage() {
                     <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--neutral-900)' }}>
                       {c.name || c.wa_phone}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--neutral-400)', marginTop: 1 }}>{c.wa_phone}</div>
+                    <div style={{ fontSize: 11, color: 'var(--neutral-400)', marginTop: 1 }}>
+                      {c.wa_phone}
+                    </div>
                   </div>
                   {isVIP && <span className="badge badge-success">VIP</span>}
                   {isNew && <span className="badge badge-neutral">New</span>}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                   {[
                     { label: 'Orders', value: c.order_count },
                     { label: 'Total spent', value: formatCurrency(c.total_spent || 0) },
@@ -106,7 +134,7 @@ export default function CustomersPage() {
                   ].map(({ label, value }) => (
                     <div key={label} style={{
                       display: 'flex', justifyContent: 'space-between',
-                      padding: '6px 0',
+                      padding: '7px 0',
                       borderBottom: '1px solid var(--neutral-100)',
                       fontSize: 12,
                     }}>
@@ -124,7 +152,9 @@ export default function CustomersPage() {
                         background: 'var(--neutral-100)',
                         color: 'var(--neutral-500)',
                         borderRadius: 10,
-                      }}>{tag}</span>
+                      }}>
+                        {tag}
+                      </span>
                     ))}
                   </div>
                 )}
